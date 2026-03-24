@@ -162,7 +162,9 @@ def main():
     )
 
     # reset environment
-    obs, _ = env.get_observations()
+    obs = env.get_observations()
+    if isinstance(obs, tuple):
+        obs = obs[0]
     timestep = 0
     # simulate environment
     while simulation_app.is_running():

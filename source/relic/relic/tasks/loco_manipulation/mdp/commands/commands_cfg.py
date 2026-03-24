@@ -169,5 +169,5 @@ class ArmLegJointBasePoseCommandCfg(CommandTermCfg):
     )
     """Command sample ranges."""
 
-    command_which_leg: int = 4
+    command_which_leg: int = -1 # Don't command any leg (Xun)
     """Which leg to command: -1: no leg; [0, 1, 2, 3]: [FL, FR, HL, HR]; 4: all leg"""

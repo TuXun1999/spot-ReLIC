@@ -28,6 +28,8 @@ class SpotKneeActuator(RemotizedPDActuator):
         damping: Tensor | float = 0,
         armature: Tensor | float = 0,
         friction: Tensor | float = 0,
+        dynamic_friction: Tensor | float = 0,
+        viscous_friction: Tensor | float = 0,
         effort_limit: Tensor | float = torch.inf,
         velocity_limit: Tensor | float = torch.inf,
     ):
@@ -42,6 +44,8 @@ class SpotKneeActuator(RemotizedPDActuator):
             damping,
             armature,
             friction,
+            dynamic_friction,
+            viscous_friction,
             effort_limit,
             velocity_limit,
         )

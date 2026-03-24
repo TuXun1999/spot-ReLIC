@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 
 from isaaclab.envs.mdp.actions import JointAction
-
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as isaac_mdp
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -356,6 +356,13 @@ class MixedPDArmMultiLegJointPositionAction(JointAction):
         )
 
     def process_actions(self, actions: torch.Tensor):
+        # print("Shape checking")
+        # policy_env_obs = self._env.observation_manager.compute_group(
+        #         "policy", update_history=False
+        #     )
+        # print(policy_env_obs.shape)
+        # print(isaac_mdp.base_lin_vel(self._env).shape)
+        # exit(1)
         """Process the actions."""
         # store the raw actions
         self._raw_actions[:] = actions
