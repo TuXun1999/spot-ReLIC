@@ -182,7 +182,11 @@ class ObservationsCfg:
             func=isaac_mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5)
         )
         actions = ObsTerm(func=isaac_mdp.last_action)
-
+        # TODO: fix it up
+        prev_action = ObsTerm(
+            func=mdp.prev_leg_action,
+            params={"leg_action_term_name": "joint_pos"},
+        )
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
@@ -434,6 +438,11 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=isaac_mdp.time_out, time_out=True)
+    # Reset the environment if too large action / velocities are detected
+    physics_explosion = DoneTerm(
+        func=mdp.outlier_detected,
+        params={"threshold": 1000.0} 
+    )
     base_contact = DoneTerm(
         func=isaac_mdp.illegal_contact,
         params={

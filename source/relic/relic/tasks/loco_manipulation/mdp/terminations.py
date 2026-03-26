@@ -8,6 +8,23 @@ from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
+def outlier_detected(env: ManagerBasedRLEnv, threshold: float = 1000.0) -> torch.Tensor:
+    """Terminates the environment if actions or base velocities explode."""
+    
+    # 1. Check for Exploding Actions
+    actions = env.action_manager.action
+    action_exploded = torch.any(torch.abs(actions) > threshold, dim=-1)
+    action_nan = torch.any(torch.isnan(actions) | torch.isinf(actions), dim=-1)
+    
+    # 2. Check for Exploding Robot Base Velocities (A common symptom of physics explosions)
+    root_vel = env.scene["robot"].data.root_com_vel_w
+    vel_exploded = torch.any(torch.abs(root_vel) > threshold, dim=-1)
+    vel_nan = torch.any(torch.isnan(root_vel) | torch.isinf(root_vel), dim=-1)
+
+    # Combine the masks
+    reset_mask = action_exploded | action_nan | vel_exploded | vel_nan
+    
+    return reset_mask
 
 def illegal_ground_contact(
     env: ManagerBasedRLEnv, threshold: float, sensor_cfg: SceneEntityCfg

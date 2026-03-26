@@ -10,7 +10,7 @@
 import argparse
 
 from isaaclab.app import AppLauncher
-
+from isaaclab.utils.io.torchscript import load_torchscript_model
 # local imports
 import cli_args  # isort: skip
 
@@ -38,6 +38,17 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument(
     "--center", action="store_true", default=False, help="Look at the robot."
 )
+
+# NEW: direct exported policy paths (either JIT or ONNX)
+parser.add_argument(
+    "--jit_policy", type=str, default=None,
+    help="Path to an exported TorchScript policy (policy.pt). If set, overrides checkpoint loading."
+)
+parser.add_argument(
+    "--onnx_policy", type=str, default=None,
+    help="Path to an exported ONNX policy (policy.onnx). If set, overrides checkpoint/JIT loading."
+)
+
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -97,6 +108,17 @@ def main():
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
+    use_jit = args_cli.jit_policy is not None
+    if not use_jit:
+        resume_path = get_checkpoint_path(
+            log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
+        )
+        log_dir = os.path.dirname(resume_path)
+    else:
+        # Use the folder of the exported policy (for video output etc.)
+        chosen_path = args_cli.jit_policy
+        resume_path = os.path.abspath(chosen_path)
+        log_dir = os.path.dirname(resume_path)
     resume_path = get_checkpoint_path(
         log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
     )
@@ -124,42 +146,48 @@ def main():
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
-
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    ppo_runner = OnPolicyRunner(
-        env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device
-    )
-    ppo_runner.load(resume_path)
-
-    # obtain the trained policy for inference
-    policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
-
-    # extract the neural network module
-    # we do this in a try-except to maintain backwards compatibility.
-    try:
-        # version 2.3 onwards
-        policy_nn = ppo_runner.alg.policy
-    except AttributeError:
-        # version 2.2 and below
-        policy_nn = ppo_runner.alg.actor_critic
-
-    # extract the normalizer
-    if hasattr(policy_nn, "actor_obs_normalizer"):
-        normalizer = policy_nn.actor_obs_normalizer
-    elif hasattr(policy_nn, "student_obs_normalizer"):
-        normalizer = policy_nn.student_obs_normalizer
+    
+    if use_jit:
+        # TorchScript policy
+        policy = load_torchscript_model(resume_path, device="cuda:0")
+        policy.eval()
+        print(f"[INFO] Loaded JIT policy: {resume_path}")
     else:
-        normalizer = None
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+        # load previously trained model
+        ppo_runner = OnPolicyRunner(
+            env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device
+        )
+        ppo_runner.load(resume_path)
 
-    # export policy to onnx/jit
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(
-        policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt"
-    )
-    export_policy_as_onnx(
-        policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx"
-    )
+        # obtain the trained policy for inference
+        policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
+
+        # extract the neural network module
+        # we do this in a try-except to maintain backwards compatibility.
+        try:
+            # version 2.3 onwards
+            policy_nn = ppo_runner.alg.policy
+        except AttributeError:
+            # version 2.2 and below
+            policy_nn = ppo_runner.alg.actor_critic
+
+        # extract the normalizer
+        if hasattr(policy_nn, "actor_obs_normalizer"):
+            normalizer = policy_nn.actor_obs_normalizer
+        elif hasattr(policy_nn, "student_obs_normalizer"):
+            normalizer = policy_nn.student_obs_normalizer
+        else:
+            normalizer = None
+
+        # export policy to onnx/jit
+        export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+        export_policy_as_jit(
+            policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt"
+        )
+        export_policy_as_onnx(
+            policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx"
+        )
 
     # reset environment
     obs = env.get_observations()

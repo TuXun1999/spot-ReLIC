@@ -48,3 +48,18 @@ def gait_phase(env: ManagerBasedRLEnv) -> torch.Tensor:
             phase, torch.zeros_like(max_length), max_length
         )
         return phase.view(-1, 1)
+    
+def prev_leg_action(
+    env: ManagerBasedRLEnv,
+    leg_action_term_name: str = "joint_pos",
+    clip_limit: float = 100.0,
+) -> torch.Tensor:
+    leg_term = env.action_manager.get_term(leg_action_term_name)
+
+    leg_act = getattr(leg_term, "processed_actions", None)
+    if leg_act is None:
+        leg_act = torch.zeros((env.num_envs, 3), device=env.device)
+    if leg_act.shape[1] != 3:
+        leg_act = leg_act[:, :3]
+
+    return torch.clamp(leg_act, min=-clip_limit, max=clip_limit)
