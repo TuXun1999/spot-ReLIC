@@ -164,7 +164,7 @@ class SpotInterlimbEnvCfg_PLAY(SpotInterlimbEnvCfg_Phase_1):
         self.curriculum.terrain_levels = None
 
         self.commands.base_velocity.rel_standing_envs = 0.0
-        self.commands.base_velocity.ranges.lin_vel_x = (0.3, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
         self.commands.base_velocity.debug_vis = False
 
         self.terminations.undesired_ground_contact.params["sensor_cfg"].body_names = [

@@ -348,6 +348,8 @@ class MixedPDArmMultiLegJointPositionAction(JointAction):
     def apply_actions(self):
         """Apply the actions."""
         # set position targets
+        # # The code is attempting to print the string "Applied actions" in Python. However, the two
+        # lines below it are commented out using the "#" symbol, so they will not be executed.
         self._asset.set_joint_position_target(
             self.processed_actions, joint_ids=self._joint_ids
         )
@@ -356,13 +358,6 @@ class MixedPDArmMultiLegJointPositionAction(JointAction):
         )
 
     def process_actions(self, actions: torch.Tensor):
-        # print("Shape checking")
-        # policy_env_obs = self._env.observation_manager.compute_group(
-        #         "policy", update_history=False
-        #     )
-        # print(policy_env_obs.shape)
-        # print(isaac_mdp.base_lin_vel(self._env).shape)
-        # exit(1)
         """Process the actions."""
         # store the raw actions
         self._raw_actions[:] = actions

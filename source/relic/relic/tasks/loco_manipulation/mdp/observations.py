@@ -54,12 +54,17 @@ def prev_leg_action(
     leg_action_term_name: str = "joint_pos",
     clip_limit: float = 100.0,
 ) -> torch.Tensor:
-    leg_term = env.action_manager.get_term(leg_action_term_name)
+    # leg_term = env.action_manager.get_term(leg_action_term_name)
 
-    leg_act = getattr(leg_term, "processed_actions", None)
+    # leg_act = getattr(leg_term, "_raw_actions", None)
+    
+    import isaaclab_tasks.manager_based.locomotion.velocity.mdp as isaac_mdp
+    leg_act = isaac_mdp.last_action(env)
+    # print("Checking obs")
+    # print(leg_act[0])
+    # print(leg_act_correct[0])
+    # input("Press to continue")
     if leg_act is None:
-        leg_act = torch.zeros((env.num_envs, 3), device=env.device)
-    if leg_act.shape[1] != 3:
-        leg_act = leg_act[:, :3]
-
+        leg_act = torch.zeros((env.num_envs, 12), device=env.device)
+    assert leg_act.shape[1] == 12, "Incorrect last leg action shape"
     return torch.clamp(leg_act, min=-clip_limit, max=clip_limit)

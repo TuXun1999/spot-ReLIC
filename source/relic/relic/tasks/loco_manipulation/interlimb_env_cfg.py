@@ -181,12 +181,12 @@ class ObservationsCfg:
         joint_vel = ObsTerm(
             func=isaac_mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5)
         )
-        actions = ObsTerm(func=isaac_mdp.last_action)
-        # TODO: fix it up
-        prev_action = ObsTerm(
-            func=mdp.prev_leg_action,
-            params={"leg_action_term_name": "joint_pos"},
-        )
+        # Clamp the action
+        # prev_action = ObsTerm(
+        #     func=mdp.prev_leg_action,
+        #     params={"leg_action_term_name": "joint_pos"},
+        # )
+        actions = ObsTerm(func = isaac_mdp.last_action)
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True

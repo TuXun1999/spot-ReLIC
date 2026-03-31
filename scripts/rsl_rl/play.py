@@ -119,10 +119,6 @@ def main():
         chosen_path = args_cli.jit_policy
         resume_path = os.path.abspath(chosen_path)
         log_dir = os.path.dirname(resume_path)
-    resume_path = get_checkpoint_path(
-        log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
-    )
-    log_dir = os.path.dirname(resume_path)
 
     # create isaac environment
     env = gym.make(
@@ -149,8 +145,9 @@ def main():
     
     if use_jit:
         # TorchScript policy
-        policy = load_torchscript_model(resume_path, device="cuda:0")
-        policy.eval()
+        print('Check path')
+        print(resume_path)
+        policy = torch.jit.load(resume_path, map_location=env.unwrapped.device).eval()
         print(f"[INFO] Loaded JIT policy: {resume_path}")
     else:
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
@@ -162,7 +159,6 @@ def main():
 
         # obtain the trained policy for inference
         policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
-
         # extract the neural network module
         # we do this in a try-except to maintain backwards compatibility.
         try:
@@ -199,9 +195,13 @@ def main():
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions = policy(obs)
+            if use_jit:
+                actions = policy(obs["policy"])
+            else:
+                actions = policy(obs)
             # env stepping
             obs, _, _, _ = env.step(actions)
+            
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
